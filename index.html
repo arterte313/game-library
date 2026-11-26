@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#151515">
+<title>Game Library</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--bg:#111;--panel:#1c1c1c;--panel2:#242424;--text:#f2f2f2;--muted:#aaa;--red:#e53935;--red2:#a91e20}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif;padding:0 0 env(safe-area-inset-bottom)}
+header{position:sticky;top:0;z-index:3;background:#151515ee;backdrop-filter:blur(10px);padding:16px 16px 12px;border-bottom:1px solid #333}
+h1{font-size:22px;margin:0 0 14px;font-weight:750;letter-spacing:.3px}
+nav{display:flex;gap:8px}
+.tab{flex:1;border:1px solid #454545;background:#222;color:#ddd;border-radius:12px;padding:12px;font-weight:700}
+.tab.active{background:var(--red);border-color:var(--red);color:white}
+main{padding:16px;max-width:760px;margin:auto}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px}
+#sectionTitle{font-size:18px;font-weight:700}
+button{cursor:pointer}
+.add{border:0;background:var(--red);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
+.cards{display:grid;gap:12px}
+.card{display:grid;grid-template-columns:108px 1fr;gap:12px;background:var(--panel);border:1px solid #303030;border-radius:15px;padding:10px;min-height:132px}
+.cover{width:108px;height:132px;border-radius:10px;background:#2b2b2b;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#777;font-size:12px;text-align:center}
+.cover img{width:100%;height:100%;object-fit:cover}
+.card-content{min-width:0;display:flex;flex-direction:column}
+.game-title{font-size:17px;font-weight:750;overflow-wrap:anywhere}
+.description{white-space:pre-wrap;overflow-wrap:anywhere;color:#c6c6c6;font-size:14px;margin-top:6px;flex:1}
+.actions{display:flex;gap:8px;margin-top:10px}
+.small{border:1px solid #444;background:#292929;color:#ddd;border-radius:8px;padding:7px 10px;font-size:13px}
+.small.delete{color:#ff7774;border-color:#6a3030}
+.empty{padding:40px 20px;text-align:center;color:#888;background:#1a1a1a;border:1px dashed #444;border-radius:14px}
+dialog{width:min(560px,calc(100% - 24px));border:1px solid #444;border-radius:16px;background:#1c1c1c;color:#eee;padding:18px}
+dialog::backdrop{background:#000a}
+form{display:grid;gap:12px}
+label{font-size:13px;color:#aaa}
+input,textarea{width:100%;margin-top:5px;border:1px solid #444;background:#111;color:#eee;border-radius:9px;padding:11px;font:inherit}
+textarea{min-height:100px;resize:vertical}
+.preview{width:90px;height:100px;object-fit:cover;border-radius:8px;background:#333;display:none}
+.formrow{display:flex;gap:10px;align-items:center}
+.formactions{display:flex;gap:8px;justify-content:flex-end}
+.cancel{background:#333;color:#eee;border:1px solid #444;border-radius:9px;padding:10px 14px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;padding:10px 16px;border-radius:10px;display:none;z-index:10}
+@media(max-width:380px){.card{grid-template-columns:86px 1fr}.cover{width:86px;height:120px}}
+</style>
+</head>
+<body>
+<header><h1>🎮 Game Library</h1><nav>
+<button class="tab active" id="playedTab">Played</button><button class="tab" id="todoTab">To Play</button>
+</nav></header>
+<main><div class="toolbar"><div id="sectionTitle">Played games</div><button class="add" id="addBtn">＋ Add game</button></div><div class="cards" id="cards"></div></main>
+<dialog id="editor"><form id="gameForm">
+<h2 id="dialogTitle" style="margin:0">Add game</h2>
+<label>Game title<input id="titleInput" maxlength="120" placeholder="Title" required></label>
+<label>Description<textarea id="descInput" maxlength="3000" placeholder="Your notes, thoughts, details…"></textarea></label>
+<label>Cover image (optional)<input id="imageInput" type="file" accept="image/*"></label>
+<div class="formrow"><img class="preview" id="preview"><small style="color:#888">Images are resized to save storage.</small></div>
+<div class="formactions"><button type="button" class="cancel" id="cancelBtn">Cancel</button><button class="add" type="submit">Save</button></div>
+</form></dialog><div id="toast"></div>
+<script>
+const STORE='gameLibrary_v1';let data={played:[],todo:[]},section='played',editing=null,imageData=null;
+const $=id=>document.getElementById(id);
+function load(){try{data=JSON.parse(localStorage.getItem(STORE))||data}catch(e){}}
+function save(){try{localStorage.setItem(STORE,JSON.stringify(data));toast('Saved on this device')}catch(e){toast('Storage full — try a smaller image')}}
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=> $('toast').style.display='none',2100)}
+function switchTo(s){section=s;$('playedTab').classList.toggle('active',s==='played');$('todoTab').classList.toggle('active',s==='todo');$('sectionTitle').textContent=s==='played'?'Played games':'Games to play';render()}
+function render(){const root=$('cards');root.innerHTML='';let arr=data[section];if(!arr.length){root.innerHTML=`<div class="empty">No games here yet.<br>Tap <b>＋ Add game</b> to add one.</div>`;return}
+arr.forEach((g,i)=>{let card=document.createElement('article');card.className='card';let cover=document.createElement('div');cover.className='cover';if(g.image){let img=document.createElement('img');img.src=g.image;cover.append(img)}else cover.textContent='No image';let body=document.createElement('div');body.className='card-content';let title=document.createElement('div');title.className='game-title';title.textContent=g.title;let desc=document.createElement('div');desc.className='description';desc.textContent=g.description||'No description yet.';let actions=document.createElement('div');actions.className='actions';let edit=document.createElement('button');edit.className='small';edit.textContent='Edit';edit.onclick=()=>openEditor(i);let del=document.createElement('button');del.className='small delete';del.textContent='Delete';del.onclick=()=>{if(confirm(`Delete "${g.title}"?`)){arr.splice(i,1);save();render()}};actions.append(edit,del);body.append(title,desc,actions);card.append(cover,body);root.append(card)})}
+function openEditor(i=null){editing=i;imageData=null;$('gameForm').reset();$('preview').style.display='none';$('dialogTitle').textContent=i===null?'Add game':'Edit game';if(i!==null){let g=data[section][i];$('titleInput').value=g.title;$('descInput').value=g.description||'';if(g.image){imageData=g.image;$('preview').src=g.image;$('preview').style.display='block'}}$('editor').showModal()}
+$('imageInput').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{imageData=await resizeImage(f);$('preview').src=imageData;$('preview').style.display='block'}catch(err){toast('Could not load image')}};
+function resizeImage(file){return new Promise((resolve,reject)=>{let img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{let max=700,scale=Math.min(1,max/Math.max(img.width,img.height)),w=Math.round(img.width*scale),h=Math.round(img.height*scale),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);resolve(c.toDataURL('image/jpeg',.78))};img.onerror=reject;img.src=url})}
+$('gameForm').onsubmit=e=>{e.preventDefault();let g={title:$('titleInput').value.trim(),description:$('descInput').value.trim(),image:imageData};if(!g.title)return;if(editing===null)data[section].unshift(g);else data[section][editing]=g;save();$('editor').close();render()};
+$('cancelBtn').onclick=()=> $('editor').close();$('addBtn').onclick=()=>openEditor();$('playedTab').onclick=()=>switchTo('played');$('todoTab').onclick=()=>switchTo('todo');
+load();render();if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
